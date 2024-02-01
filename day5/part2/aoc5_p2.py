@@ -12,43 +12,45 @@ class GenericMap:
     def appendRange(self, range):
         self.ranges.append(range)
 
-def findRange(seedNumber):
-    global START_MAP
-    closestSource = float("inf")
-
-    for destination, source, length in allMaps[START_MAP].ranges:
-        destination, source, length = int(destination), int(source), int(length)
-        if seedNumber >= source and seedNumber < source + length:
-            return (source + length) - seedNumber
-        if source > seedNumber:
-            closestSource = min(closestSource, abs(source-seedNumber))
-
-    return closestSource
-
-def findLocation(seedNumber):
-    global START_MAP
-    currentKey = START_MAP 
-    currentVal = int(seedNumber)
-
-    while currentKey in allMaps:
-        currentMap = allMaps[currentKey]
-        for destination, source, length in currentMap.ranges:
-            destination, source, length = int(destination), int(source), int(length)
-            if currentVal >= source and currentVal < source + length:
-                currentVal = currentVal - source + destination 
-                break
-        currentKey = currentMap.mapDestination
-
-    return currentVal
-    
+def findNewSeedRanges(aRange, source, length):
+    offset = int(aRange[1]) - int(aRange[0])
+    mapRangeStart, mapRangeEnd = int(aRange[1]), int(aRange[1]) + int(aRange[2])
+    seedStart, seedLength, seedEnd = int(source), int(length), int(source) + int(length)
+    newRanges = []
+    #Merge intervals problem. Need to handle 6 cases
+    #1. end < rangeStart
+    if seedEnd <= mapRangeStart:
+        newRanges.append([seedStart, seedLength])
+    #2. start < rangeStart and end > rangeStart and end < rangeEnd
+    elif seedStart < mapRangeStart and seedEnd > mapRangeStart and seedEnd <= mapRangeEnd:
+        newRanges.append([seedStart, mapRangeStart - seedStart])
+        newRanges.append([mapRangeStart - offset, seedEnd - mapRangeStart])
+    #3. start > rangeStart and start < rangeEnd and end > rangeEnd
+    elif seedStart >= mapRangeStart and seedStart < mapRangeEnd and seedEnd >= mapRangeEnd:
+        newRanges.append([seedStart - offset, mapRangeEnd - seedStart])
+        newRanges.append([mapRangeEnd, seedEnd - mapRangeEnd])
+    #4. start < rangeStart and end > rangeEnd
+    elif seedStart < mapRangeStart and seedEnd >= mapRangeEnd:
+        newRanges.append([seedStart, mapRangeStart - seedStart])
+        newRanges.append([mapRangeStart - offset, mapRangeEnd - mapRangeStart])
+        newRanges.append([mapRangeEnd, seedEnd - mapRangeEnd])
+    #5. start > rangeStart and end < rangeEnd
+    elif seedStart >= mapRangeStart and seedEnd < mapRangeEnd:
+        newRanges.append([seedStart - offset, seedEnd - seedStart])
+    #6. start > rangeEnd
+    elif seedStart >= mapRangeEnd:
+        newRanges.append([seedStart, seedLength])
+    print("newRanges", newRanges)
+    return newRanges
 
 def processFile(file):
-    line = file.readline()
-    seeds = line.strip().split(" ")[1:]
     global allMaps
     currentMap = GenericMap("tmp", "tmp") 
     minLocation = float("inf") 
 
+    #Process file data
+    line = file.readline()
+    seedRanges = line.strip().split(" ")[1:]
     while line:
         line = file.readline()
         if len(line.strip()) > 0: 
@@ -61,15 +63,31 @@ def processFile(file):
             else:
                 currentMap.appendRange(line.strip().split(" "))
     
-    i = 0
-    while i+1 < len(seeds):
-        source = int(seeds[i])
-        length = int(seeds[i+1])
-        seedIndex = source
-        while seedIndex < source + length:
-            minLocation = min(minLocation, findLocation(seedIndex))
-            seedIndex += findRange(seedIndex)
-        i += 2
+    #For each map, go through the seed ranges, and apply the map to obtain new seed ranges
+    currentKey = START_MAP
+    while currentKey in allMaps:
+        currentMap = allMaps[currentKey]
+        i = 0
+        newSeedRanges = []
+        while i+1 < len(seedRanges):
+            source = int(seedRanges[i])
+            length = int(seedRanges[i+1])
+            for aRange in currentMap.ranges:
+                print("aRange", aRange)
+                for r in findNewSeedRanges(aRange, source, length):
+                    newSeedRanges.append(r[0])
+                    newSeedRanges.append(r[1])
+            i += 2
+        seedRanges = newSeedRanges
+        if currentMap.mapSource == "seed":
+            print("seedRanges", seedRanges)
+            sys.exit()
+        currentKey = currentMap.mapDestination
+
+    #Look for min location if final ranges
+    for i, r in enumerate(seedRanges):
+        if i % 2 == 0:
+            minLocation = min(minLocation, r)
 
     return minLocation
 
