@@ -17,35 +17,36 @@ def findNewSeedRanges(seedRanges, mapRange):
     newSeedRanges = []
     oldSeedRanges = []
     while i < len(seedRanges):
+        # Variables relating to each seed ranges
         seedStart, seedLength = int(seedRanges[i]), int(seedRanges[i+1])
+        seedEnd = seedStart + seedLength
+        # Variables relating to each map range
         offset = int(mapRange[1]) - int(mapRange[0])
         mapRangeStart, mapRangeEnd = int(mapRange[1]), int(mapRange[1]) + int(mapRange[2])
-        seedEnd = seedStart + seedLength
-        #Merge intervals problem. Need to handle 6 cases
-        #1. end < rangeStart
+        # Merge intervals problem. Need to handle 6 cases
+        # 1. end < rangeStart
         if seedEnd <= mapRangeStart:
             oldSeedRanges.extend([seedStart, seedLength])
-        #2. start < rangeStart and end > rangeStart and end < rangeEnd
+        # 2. start < rangeStart and end > rangeStart and end < rangeEnd
         elif seedStart < mapRangeStart and seedEnd > mapRangeStart and seedEnd <= mapRangeEnd:
             oldSeedRanges.extend([seedStart, mapRangeStart - seedStart])
             newSeedRanges.extend([mapRangeStart - offset, seedEnd - mapRangeStart])
-        #3. start > rangeStart and start < rangeEnd and end > rangeEnd
+        # 3. start > rangeStart and start < rangeEnd and end > rangeEnd
         elif seedStart >= mapRangeStart and seedStart < mapRangeEnd and seedEnd >= mapRangeEnd:
             newSeedRanges.extend([seedStart - offset, mapRangeEnd - seedStart])
             if seedEnd != mapRangeEnd:
                 oldSeedRanges.extend([mapRangeEnd, seedEnd - mapRangeEnd])
-        #4. start < rangeStart and end > rangeEnd
+        # 4. start < rangeStart and end > rangeEnd
         elif seedStart < mapRangeStart and seedEnd >= mapRangeEnd:
             oldSeedRanges.extend([seedStart, mapRangeStart - seedStart])
             newSeedRanges.extend([mapRangeStart - offset, mapRangeEnd - mapRangeStart])
             oldSeedRanges.extend([mapRangeEnd, seedEnd - mapRangeEnd])
-        #5. start > rangeStart and end < rangeEnd
+        # 5. start > rangeStart and end < rangeEnd
         elif seedStart >= mapRangeStart and seedEnd < mapRangeEnd:
             newSeedRanges.extend([seedStart - offset, seedEnd - seedStart])
-        #6. start > rangeEnd
+        # 6. start > rangeEnd
         elif seedStart >= mapRangeEnd:
             oldSeedRanges.extend([seedStart, seedLength])
-        
         i += 2
 
     return [newSeedRanges, oldSeedRanges]
@@ -55,7 +56,7 @@ def processFile(file):
     currentMap = GenericMap("tmp", "tmp") 
     minLocation = float("inf") 
 
-    #Process file data
+    # Process file data
     line = file.readline()
     seedRanges = line.strip().split(" ")[1:]
     while line:
@@ -70,7 +71,7 @@ def processFile(file):
             else:
                 currentMap.appendRange(line.strip().split(" "))
     
-    #For each map, go through the seed ranges, and apply the map to obtain new seed ranges
+    # For each map, apply mapRanges to seedRangse. Similar to applying mappings in place.
     currentKey = START_MAP
     while currentKey in allMaps:
         currentMap = allMaps[currentKey]
@@ -84,7 +85,7 @@ def processFile(file):
         seedRanges = newSeedRange
         currentKey = currentMap.mapDestination
 
-    #Look for min location if final ranges
+    # Look for min location if final ranges
     for i, r in enumerate(seedRanges):
         if i % 2 == 0:
             minLocation = min(minLocation, r)
