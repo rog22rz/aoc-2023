@@ -12,35 +12,42 @@ class GenericMap:
     def appendRange(self, range):
         self.ranges.append(range)
 
-def findNewSeedRanges(aRange, source, length):
-    offset = int(aRange[1]) - int(aRange[0])
-    mapRangeStart, mapRangeEnd = int(aRange[1]), int(aRange[1]) + int(aRange[2])
-    seedStart, seedLength, seedEnd = int(source), int(length), int(source) + int(length)
+def findNewSeedRanges(ranges, source, length):
     newRanges = []
-    #Merge intervals problem. Need to handle 6 cases
-    #1. end < rangeStart
-    if seedEnd <= mapRangeStart:
-        newRanges.append([seedStart, seedLength])
-    #2. start < rangeStart and end > rangeStart and end < rangeEnd
-    elif seedStart < mapRangeStart and seedEnd > mapRangeStart and seedEnd <= mapRangeEnd:
-        newRanges.append([seedStart, mapRangeStart - seedStart])
-        newRanges.append([mapRangeStart - offset, seedEnd - mapRangeStart])
-    #3. start > rangeStart and start < rangeEnd and end > rangeEnd
-    elif seedStart >= mapRangeStart and seedStart < mapRangeEnd and seedEnd >= mapRangeEnd:
-        newRanges.append([seedStart - offset, mapRangeEnd - seedStart])
-        newRanges.append([mapRangeEnd, seedEnd - mapRangeEnd])
-    #4. start < rangeStart and end > rangeEnd
-    elif seedStart < mapRangeStart and seedEnd >= mapRangeEnd:
-        newRanges.append([seedStart, mapRangeStart - seedStart])
-        newRanges.append([mapRangeStart - offset, mapRangeEnd - mapRangeStart])
-        newRanges.append([mapRangeEnd, seedEnd - mapRangeEnd])
-    #5. start > rangeStart and end < rangeEnd
-    elif seedStart >= mapRangeStart and seedEnd < mapRangeEnd:
-        newRanges.append([seedStart - offset, seedEnd - seedStart])
-    #6. start > rangeEnd
-    elif seedStart >= mapRangeEnd:
-        newRanges.append([seedStart, seedLength])
-    print("newRanges", newRanges)
+    oldRanges = [source, length]
+    for aRange in ranges:
+        offset = int(aRange[1]) - int(aRange[0])
+        mapRangeStart, mapRangeEnd = int(aRange[1]), int(aRange[1]) + int(aRange[2])
+        if not oldRanges:
+            break
+        seedStart, seedLength = int(oldRanges.pop(0)), int(oldRanges.pop(0))
+        seedEnd = seedStart + seedLength
+        #Merge intervals problem. Need to handle 6 cases
+        #1. end < rangeStart
+        if seedEnd <= mapRangeStart:
+            oldRanges.extend([seedStart, seedLength])
+        #2. start < rangeStart and end > rangeStart and end < rangeEnd
+        elif seedStart < mapRangeStart and seedEnd > mapRangeStart and seedEnd <= mapRangeEnd:
+            oldRanges.extend([seedStart, mapRangeStart - seedStart])
+            newRanges.extend([mapRangeStart - offset, seedEnd - mapRangeStart])
+        #3. start > rangeStart and start < rangeEnd and end > rangeEnd
+        elif seedStart >= mapRangeStart and seedStart < mapRangeEnd and seedEnd >= mapRangeEnd:
+            newRanges.extend([seedStart - offset, mapRangeEnd - seedStart])
+            if seedEnd != mapRangeEnd:
+                oldRanges.extend([mapRangeEnd, seedEnd - mapRangeEnd])
+        #4. start < rangeStart and end > rangeEnd
+        elif seedStart < mapRangeStart and seedEnd >= mapRangeEnd:
+            oldRanges.extend([seedStart, mapRangeStart - seedStart])
+            newRanges.extend([mapRangeStart - offset, mapRangeEnd - mapRangeStart])
+            oldRanges.extend([mapRangeEnd, seedEnd - mapRangeEnd])
+        #5. start > rangeStart and end < rangeEnd
+        elif seedStart >= mapRangeStart and seedEnd < mapRangeEnd:
+            newRanges.extend([seedStart - offset, seedEnd - seedStart])
+        #6. start > rangeEnd
+        elif seedStart >= mapRangeEnd:
+            oldRanges.extend([seedStart, seedLength])
+
+    newRanges.extend(oldRanges)
     return newRanges
 
 def processFile(file):
@@ -72,16 +79,10 @@ def processFile(file):
         while i+1 < len(seedRanges):
             source = int(seedRanges[i])
             length = int(seedRanges[i+1])
-            for aRange in currentMap.ranges:
-                print("aRange", aRange)
-                for r in findNewSeedRanges(aRange, source, length):
-                    newSeedRanges.append(r[0])
-                    newSeedRanges.append(r[1])
+            newSeedRanges.extend(findNewSeedRanges(currentMap.ranges, source, length))
             i += 2
+        print(newSeedRanges)
         seedRanges = newSeedRanges
-        if currentMap.mapSource == "seed":
-            print("seedRanges", seedRanges)
-            sys.exit()
         currentKey = currentMap.mapDestination
 
     #Look for min location if final ranges
