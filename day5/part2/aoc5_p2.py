@@ -12,43 +12,43 @@ class GenericMap:
     def appendRange(self, range):
         self.ranges.append(range)
 
-def findNewSeedRanges(ranges, source, length):
-    newRanges = []
-    oldRanges = [source, length]
-    for aRange in ranges:
-        offset = int(aRange[1]) - int(aRange[0])
-        mapRangeStart, mapRangeEnd = int(aRange[1]), int(aRange[1]) + int(aRange[2])
-        if not oldRanges:
-            break
-        seedStart, seedLength = int(oldRanges.pop(0)), int(oldRanges.pop(0))
+def findNewSeedRanges(seedRanges, mapRange):
+    i = 0
+    newSeedRanges = []
+    oldSeedRanges = []
+    while i < len(seedRanges):
+        seedStart, seedLength = int(seedRanges[i]), int(seedRanges[i+1])
+        offset = int(mapRange[1]) - int(mapRange[0])
+        mapRangeStart, mapRangeEnd = int(mapRange[1]), int(mapRange[1]) + int(mapRange[2])
         seedEnd = seedStart + seedLength
         #Merge intervals problem. Need to handle 6 cases
         #1. end < rangeStart
         if seedEnd <= mapRangeStart:
-            oldRanges.extend([seedStart, seedLength])
+            oldSeedRanges.extend([seedStart, seedLength])
         #2. start < rangeStart and end > rangeStart and end < rangeEnd
         elif seedStart < mapRangeStart and seedEnd > mapRangeStart and seedEnd <= mapRangeEnd:
-            oldRanges.extend([seedStart, mapRangeStart - seedStart])
-            newRanges.extend([mapRangeStart - offset, seedEnd - mapRangeStart])
+            oldSeedRanges.extend([seedStart, mapRangeStart - seedStart])
+            newSeedRanges.extend([mapRangeStart - offset, seedEnd - mapRangeStart])
         #3. start > rangeStart and start < rangeEnd and end > rangeEnd
         elif seedStart >= mapRangeStart and seedStart < mapRangeEnd and seedEnd >= mapRangeEnd:
-            newRanges.extend([seedStart - offset, mapRangeEnd - seedStart])
+            newSeedRanges.extend([seedStart - offset, mapRangeEnd - seedStart])
             if seedEnd != mapRangeEnd:
-                oldRanges.extend([mapRangeEnd, seedEnd - mapRangeEnd])
+                oldSeedRanges.extend([mapRangeEnd, seedEnd - mapRangeEnd])
         #4. start < rangeStart and end > rangeEnd
         elif seedStart < mapRangeStart and seedEnd >= mapRangeEnd:
-            oldRanges.extend([seedStart, mapRangeStart - seedStart])
-            newRanges.extend([mapRangeStart - offset, mapRangeEnd - mapRangeStart])
-            oldRanges.extend([mapRangeEnd, seedEnd - mapRangeEnd])
+            oldSeedRanges.extend([seedStart, mapRangeStart - seedStart])
+            newSeedRanges.extend([mapRangeStart - offset, mapRangeEnd - mapRangeStart])
+            oldSeedRanges.extend([mapRangeEnd, seedEnd - mapRangeEnd])
         #5. start > rangeStart and end < rangeEnd
         elif seedStart >= mapRangeStart and seedEnd < mapRangeEnd:
-            newRanges.extend([seedStart - offset, seedEnd - seedStart])
+            newSeedRanges.extend([seedStart - offset, seedEnd - seedStart])
         #6. start > rangeEnd
         elif seedStart >= mapRangeEnd:
-            oldRanges.extend([seedStart, seedLength])
+            oldSeedRanges.extend([seedStart, seedLength])
+        
+        i += 2
 
-    newRanges.extend(oldRanges)
-    return newRanges
+    return [newSeedRanges, oldSeedRanges]
 
 def processFile(file):
     global allMaps
@@ -75,14 +75,13 @@ def processFile(file):
     while currentKey in allMaps:
         currentMap = allMaps[currentKey]
         i = 0
-        newSeedRanges = []
-        while i+1 < len(seedRanges):
-            source = int(seedRanges[i])
-            length = int(seedRanges[i+1])
-            newSeedRanges.extend(findNewSeedRanges(currentMap.ranges, source, length))
-            i += 2
-        print(newSeedRanges)
-        seedRanges = newSeedRanges
+        newSeedRange, oldSeedRange = [], []
+        for mapRange in currentMap.ranges:
+            new, oldSeedRange = findNewSeedRanges(seedRanges, mapRange)
+            newSeedRange.extend(new)
+            seedRanges = oldSeedRange
+        newSeedRange.extend(oldSeedRange)
+        seedRanges = newSeedRange
         currentKey = currentMap.mapDestination
 
     #Look for min location if final ranges
